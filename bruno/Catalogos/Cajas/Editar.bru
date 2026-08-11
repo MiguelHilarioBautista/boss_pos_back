@@ -1,0 +1,41 @@
+meta {
+  name: Editar
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{base_url}}/api/cajas/{{caja_id_creada}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "nombre": "Caja 2 (renombrada)",
+    "identificador_hw": "IMPR-001"
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  No admite cambiar sucursal_id, codigo ni serie_folio aqui (son
+  inmutables tras el alta, ver R-M1-3) ni "activo" — eso es Cambiar Estado.
+}

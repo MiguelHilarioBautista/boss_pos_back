@@ -1,0 +1,43 @@
+meta {
+  name: Cambiar contraseña
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/api/auth/cambiar-password
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "password_actual": "Cambiar#2026",
+    "password_nuevo": "Admin123",
+    "password_confirmacion": "Admin123"
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+}
+
+tests {
+  test("200 cambiada", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().cambiada).to.equal(true);
+  });
+}
+
+docs {
+  Corre esto una sola vez con la contraseña semilla (Cambiar#2026). Si lo
+  vuelves a correr, password_actual ya no va a coincidir — actualiza el
+  body con la contraseña vigente.
+}

@@ -1,0 +1,34 @@
+meta {
+  name: Reactivar
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/api/usuarios/{{usuario_id_creado}}/reactivar
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 y activo=true", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().activo).to.equal(true);
+  });
+}
+
+docs {
+  Tambien limpia intentos_fallidos y bloqueado_hasta, para que el usuario no
+  vuelva a una cuenta bloqueada sin saberlo.
+}

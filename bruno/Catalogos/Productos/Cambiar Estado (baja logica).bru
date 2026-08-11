@@ -1,0 +1,42 @@
+meta {
+  name: Cambiar Estado (baja logica)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{base_url}}/api/productos/{{producto_id_creado}}/estado
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "activo": false
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 y activo=false", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().activo).to.equal(false);
+  });
+}
+
+docs {
+  RN-M1-02: nunca DELETE fisico, solo baja logica. El producto deja de
+  aparecer en Buscar (POS) pero sigue existiendo para reportes/historial.
+  Manda {"activo": true} para reactivarlo.
+}

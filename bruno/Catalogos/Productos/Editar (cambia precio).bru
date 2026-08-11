@@ -1,0 +1,50 @@
+meta {
+  name: Editar (cambia precio)
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/api/productos/{{producto_id_creado}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "nombre": "Refresco 600ml",
+    "sku": "ABC-001",
+    "codigo_barras": "7501234567890",
+    "precio": 21.00,
+    "costo_neto": 12.00,
+    "impuesto_id": 1,
+    "id_categoria": {{categoria_id_creada}},
+    "id_unidad_medida": 1,
+    "controla_stock": true
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  PUT es reemplazo total (no parcial): manda todos los campos. Como
+  "precio" cambia de 18.50 a 21.00, ademas de producto.crear se exige el
+  permiso precio.modificar — sin el, esto responde 403 aunque el usuario
+  pueda crear productos. Revisa Historial de Precios despues de esto.
+}

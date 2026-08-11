@@ -1,0 +1,56 @@
+meta {
+  name: Crear
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/productos
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "nombre": "Refresco 600ml",
+    "sku": "ABC-001",
+    "codigo_barras": "7501234567890",
+    "precio": 18.50,
+    "costo_neto": 12.00,
+    "impuesto_id": 1,
+    "id_categoria": {{categoria_id_creada}},
+    "id_unidad_medida": 1,
+    "controla_stock": true
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar('producto_id_creado', res.getBody().id);
+  }
+}
+
+tests {
+  test("201 creado, margen calculado", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().margen_unitario).to.equal('6.50');
+  });
+}
+
+docs {
+  impuesto_id=1 (IVA16) y id_unidad_medida=1 (PZA) son del seed de este
+  repo. Corre Categorias/Crear antes para tener categoria_id_creada, o
+  reemplaza ese valor por un id real. Requiere permiso producto.crear.
+}

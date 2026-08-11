@@ -1,0 +1,41 @@
+meta {
+  name: 0. Obtener CSRF Cookie
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/sanctum/csrf-cookie
+  body: none
+  auth: none
+}
+
+headers {
+  Origin: {{frontend_origin}}
+  Accept: application/json
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+script:post-response {
+  const cookie = bru.cookies.get('XSRF-TOKEN');
+  if (cookie) {
+    bru.setVar('xsrf_token', decodeURIComponent(cookie));
+  }
+}
+
+tests {
+  test("XSRF-TOKEN recibido", function () {
+    const cookie = bru.cookies.get('XSRF-TOKEN');
+    expect(cookie).to.not.be.empty;
+  });
+}
+
+docs {
+  Corre esto SIEMPRE primero (una vez por sesión de pruebas, y de nuevo
+  después de un Logout). Deja la cookie de sesión lista y guarda el token
+  CSRF en la variable xsrf_token para las siguientes requests.
+}

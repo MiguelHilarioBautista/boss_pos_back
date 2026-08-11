@@ -1,0 +1,35 @@
+meta {
+  name: PIN — Revalidar
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/api/auth/pin
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "pin": "1234"
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+docs {
+  El usuario admin semilla no tiene PIN configurado todavia (pin_hash es
+  NULL) — esto va a responder 422 "pin_no_configurado" hasta que se
+  implemente el alta de PIN (M1+). Sirve para probar el caso de error.
+}

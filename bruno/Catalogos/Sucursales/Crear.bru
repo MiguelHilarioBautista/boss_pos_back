@@ -1,0 +1,50 @@
+meta {
+  name: Crear
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/sucursales
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "nombre": "Sucursal Sur",
+    "codigo": "SUR",
+    "zona_frontera": false,
+    "serie": "A02"
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar('sucursal_id_creada', res.getBody().id);
+  }
+}
+
+tests {
+  test("201 creada", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  RN-M1-06 / D-M1-3: el alta crea automaticamente los folios VENTA y DEVOL
+  para la serie indicada (default "A01" si se omite "serie"). Requiere
+  permiso config.modificar (ADMIN o GERENTE).
+}

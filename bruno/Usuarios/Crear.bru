@@ -1,0 +1,53 @@
+meta {
+  name: Crear
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/usuarios
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "usuario": "cajero.demo",
+    "password_inicial": "Temporal123",
+    "nombre": "Nombre",
+    "apellidos": "Apellido",
+    "rol_id": 4,
+    "sucursales": [1],
+    "sucursal_principal_id": 1
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar('usuario_id_creado', res.getBody().id);
+  }
+}
+
+tests {
+  test("201 creado", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  rol_id=4 (CAJERO) y sucursales=[1] (MTZ) son los ids del seed inicial de
+  este repo — ajusta si tu BD tiene otros. debe_cambiar_pass queda en true
+  siempre, sin importar la contraseña que mandes aqui.
+}

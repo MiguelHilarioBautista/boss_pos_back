@@ -1,0 +1,32 @@
+meta {
+  name: Buscar (POS)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/productos/buscar?q=ABC
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Origin: {{frontend_origin}}
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  SKU exacto -> codigo de barras exacto -> nombre por prefijo (D-M1-1),
+  limite 20, solo activos. Cambia ?q= por un SKU/nombre real de tu BD.
+}

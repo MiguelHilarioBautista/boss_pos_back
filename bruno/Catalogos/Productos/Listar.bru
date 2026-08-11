@@ -1,0 +1,32 @@
+meta {
+  name: Listar
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/productos
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Origin: {{frontend_origin}}
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Filtros opcionales: ?categoria_id=&marca_id=&activo=1&q=&por_pagina=20.
+  No requiere permiso especial, solo sesion activa.
+}

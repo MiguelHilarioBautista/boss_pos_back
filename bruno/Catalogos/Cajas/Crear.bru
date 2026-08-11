@@ -1,0 +1,51 @@
+meta {
+  name: Crear
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/cajas
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "sucursal_id": {{sucursal_id_creada}},
+    "codigo": "CAJA-02",
+    "nombre": "Caja 2",
+    "serie_folio": "A03"
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+  sucursal_id_creada: 1
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar('caja_id_creada', res.getBody().id);
+  }
+}
+
+tests {
+  test("201 creada", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  Usa la serie que ya provisiono Sucursales/Crear (A02/A03 segun corras) o
+  una nueva — si es nueva, esta misma llamada la provisiona (D-M1-3
+  reforzado). codigo y serie_folio son unicos POR SUCURSAL, no globalmente.
+  Requiere permiso config.modificar.
+}

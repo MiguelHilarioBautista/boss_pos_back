@@ -1,0 +1,43 @@
+meta {
+  name: Cambiar Estado
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{base_url}}/api/unidades/{{unidad_id_creada}}/estado
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "activo": false
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 y activo=false", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().activo).to.equal(false);
+  });
+}
+
+docs {
+  Baja logica (nunca DELETE). Manda {"activo": true} para reactivar. Ojo:
+  si la unidad ya la usan productos existentes con permite_decimales
+  distinto, eso no se revalida retroactivamente (M2/M5 lo consumen tal
+  cual esta al momento de la venta).
+}

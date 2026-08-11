@@ -1,0 +1,49 @@
+meta {
+  name: Crear
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/impuestos
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "codigo": "IVA16_2028",
+    "nombre": "IVA 16% (vigente 2028)",
+    "tasa": 0.16
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar('impuesto_id_creado', res.getBody().id);
+  }
+}
+
+tests {
+  test("201 creado", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  RN-M1-05: cuando cambia la ley se crea un impuesto NUEVO, nunca se edita
+  la tasa de uno existente (no hay ruta PUT para esta entidad, a proposito).
+  tasa debe estar en [0, 1) — prueba con 1.0 para ver el 422.
+}

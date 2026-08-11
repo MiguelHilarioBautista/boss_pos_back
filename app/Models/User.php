@@ -1,95 +1,118 @@
-﻿<?php
+<?php
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
-use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements JWTSubject
+class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
-    use HasRoles;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    protected $table = 'usuarios';
+
+    const CREATED_AT = 'creado_fecha';
+    const UPDATED_AT = 'modificado_fecha';
+
     protected $fillable = [
-        'name',
+        'rol_id',
+        'usuario',
+        'password_hash',
+        'pin_hash',
+        'nombre',
+        'apellidos',
+        'numero_empleado',
         'email',
-        'password',
+        'telefono',
+        'activo',
+        'debe_cambiar_pass',
+        'intentos_fallidos',
+        'bloqueado_hasta',
+        'ultimo_acceso',
+        'password_actualizado',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
-        'password',
-        'remember_token',
+        'password_hash',
+        'pin_hash',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'activo' => 'boolean',
+            'debe_cambiar_pass' => 'boolean',
+            'intentos_fallidos' => 'integer',
+            'bloqueado_hasta' => 'datetime',
+            'ultimo_acceso' => 'datetime',
+            'password_actualizado' => 'datetime',
         ];
     }
 
-    public function getJWTIdentifier()
+    /**
+     * El esquema usa password_hash, no la columna estandar `password` de Laravel.
+     */
+    public function getAuthPassword(): string
     {
-        return $this->getKey();
+        return $this->password_hash;
     }
 
     /**
-     * Return a key value array, containing any custom claims to be added to the JWT.
-     *
-     * @return array
+     * El esquema no tiene remember_token: "recordarme" no aplica (no se usa).
      */
-    public function getJWTCustomClaims()
+    public function getRememberToken()
     {
-        return [];
+        return null;
     }
 
-    public function sales(): HasMany
+    public function setRememberToken($value)
     {
-        return $this->hasMany(Sale::class);
+        // no-op: no existe la columna remember_token en `usuarios`.
     }
 
-    public function cashSessions(): HasMany
+    public function getRememberTokenName()
     {
-        return $this->hasMany(CashSession::class);
+        return '';
     }
 
-    public function leads(): HasMany
+    public function rol(): BelongsTo
     {
-        return $this->hasMany(Lead::class, 'owner_user_id');
+        return $this->belongsTo(Role::class, 'rol_id');
     }
 
-    public function leadNotes(): HasMany
+    public function sucursales(): BelongsToMany
     {
-        return $this->hasMany(LeadNote::class);
+        return $this->belongsToMany(Sucursal::class, 'usuario_sucursal', 'usuario_id', 'sucursal_id')
+            ->withPivot('es_principal');
     }
 
-    public function leadTasks(): HasMany
+    /**
+     * Codigos de permiso que otorga el rol del usuario, via rol_permiso.
+     *
+     * @return array<int, string>
+     */
+    public function permisos(): array
     {
-        return $this->hasMany(LeadTask::class);
+        if (! isset($this->permisosCache)) {
+            $this->permisosCache = Permiso::query()
+                ->join('rol_permiso', 'rol_permiso.permiso_id', '=', 'permisos.id')
+                ->where('rol_permiso.rol_id', $this->rol_id)
+                ->pluck('permisos.codigo')
+                ->all();
+        }
+
+        return $this->permisosCache;
     }
+
+    public function tienePermiso(string $codigo): bool
+    {
+        return in_array($codigo, $this->permisos(), true);
+    }
+
+    /** @var array<int, string>|null */
+    private ?array $permisosCache = null;
 }
-
-
-

@@ -1,0 +1,57 @@
+meta {
+  name: Login
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "usuario": "miguel@gmail.com",
+    "password": "Cambiar#2026"
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+script:post-response {
+  // El login regenera la sesion (anti session-fixation), lo que rota el
+  // token CSRF. Se vuelve a capturar aqui para que las siguientes requests
+  // (cambiar-password, logout) usen el token vigente.
+  const cookie = bru.cookies.get('XSRF-TOKEN');
+  if (cookie) {
+    bru.setVar('xsrf_token', decodeURIComponent(cookie));
+  }
+}
+
+tests {
+  test("200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("trae permisos y sucursales", function () {
+    const json = res.getBody();
+    expect(json).to.have.property('permisos');
+    expect(json).to.have.property('sucursales');
+  });
+}
+
+docs {
+  Usuario admin semilla. Si debe_cambiar_pass viene en true en la respuesta,
+  corre "Cambiar contraseña" antes de probar cualquier otro endpoint.
+}

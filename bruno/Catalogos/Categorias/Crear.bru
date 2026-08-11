@@ -1,0 +1,46 @@
+meta {
+  name: Crear
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/categorias
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "nombre": "Comida"
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar('categoria_id_creada', res.getBody().id);
+  }
+}
+
+tests {
+  test("201 creada", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  categoria_padre_id es opcional (arbol de categorias). Requiere permiso
+  config.modificar O producto.crear.
+}

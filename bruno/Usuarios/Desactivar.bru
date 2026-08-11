@@ -1,0 +1,35 @@
+meta {
+  name: Desactivar
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/api/usuarios/{{usuario_id_creado}}/desactivar
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 y activo=false", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().activo).to.equal(false);
+  });
+}
+
+docs {
+  P2 (nada se borra): esto es un soft-deactivate, nunca un DELETE. No puedes
+  desactivar tu propia sesion (422 operacion_invalida) — usa el id de otro
+  usuario (el creado por "Crear", por ejemplo).
+}
