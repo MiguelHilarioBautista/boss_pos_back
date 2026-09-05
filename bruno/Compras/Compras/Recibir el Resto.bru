@@ -1,0 +1,49 @@
+meta {
+  name: Recibir el Resto
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/api/compras/{{compra_id_creada}}/recibir
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "recepciones": [
+      {
+        "detalle_id": {{detalle_id_creado}},
+        "cantidad_recibida": 9
+      }
+    ]
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 y estatus RECIBIDA", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().estatus).to.equal('RECIBIDA');
+  });
+}
+
+docs {
+  Corre esto despues de "Recibir Parcial" con la cantidad pendiente exacta
+  (15 - 6 = 9 si seguiste el flujo de "Editar Borrador"). Pedir mas de lo
+  pendiente responde 422 (D-M3-2, ck_detcompra_cantidad). Al completarse
+  todos los renglones la compra pasa a RECIBIDA y se registra
+  fecha_recepcion.
+}

@@ -1,0 +1,45 @@
+meta {
+  name: Fijar Minimos
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{base_url}}/api/inventario/{{producto_id_creado}}/minimos
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "sucursal_id": {{sucursal_id_creada}},
+    "stock_minimo": 5,
+    "stock_maximo": 100
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+  sucursal_id_creada: 1
+  producto_id_creado: 1
+}
+
+tests {
+  test("200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  No es un movimiento (no toca el kardex). Crea la fila de inventario si
+  todavia no existe. Requiere permiso inventario.ajustar. Usa el
+  producto_id_creado de Catalogos/Productos/Crear.
+}

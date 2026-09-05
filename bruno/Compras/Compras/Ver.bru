@@ -1,0 +1,33 @@
+meta {
+  name: Ver
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/api/compras/{{compra_id_creada}}
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Origin: {{frontend_origin}}
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 con detalle", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().detalle).to.be.an('array');
+  });
+}
+
+docs {
+  Solo requiere sesion autenticada, sin permiso especifico (fila propia en
+  la tabla de endpoints del PDF de M3, distinta al resto).
+}

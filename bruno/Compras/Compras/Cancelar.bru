@@ -1,0 +1,44 @@
+meta {
+  name: Cancelar
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/api/compras/{{compra_id_creada}}/cancelar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "motivo": "El proveedor ya no tiene existencias del producto"
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 y estatus CANCELADA", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().estatus).to.equal('CANCELADA');
+  });
+}
+
+docs {
+  motivo es obligatorio (ck_compra_cancel exige cancelada_por/fecha/motivo
+  no nulos). Funciona sobre BORRADOR o PARCIAL; sobre RECIBIDA o CANCELADA
+  responde 409 estado_invalido. D-M3-5: lo ya recibido NO se revierte —
+  si corriste "Recibir Parcial" antes de esto, el stock que ya entro se
+  queda igual, solo se cancela el pendiente.
+}

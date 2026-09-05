@@ -1,0 +1,33 @@
+meta {
+  name: Alertas Stock Bajo
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/inventario/alertas
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Origin: {{frontend_origin}}
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  CU-04, lee la vista v_stock_bajo (stock <= stock_minimo). Si sale vacio,
+  probablemente ningun producto tiene stock_minimo configurado todavia —
+  usa "Fijar Minimos" primero.
+}

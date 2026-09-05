@@ -1,11 +1,17 @@
 <?php
 
+use App\Http\Controllers\Api\AjusteController;
+use App\Http\Controllers\Api\AlertasController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CajaController;
 use App\Http\Controllers\Api\CategoriaProductoController;
+use App\Http\Controllers\Api\CompraController;
 use App\Http\Controllers\Api\ImpuestoController;
+use App\Http\Controllers\Api\InventarioController;
+use App\Http\Controllers\Api\KardexController;
 use App\Http\Controllers\Api\MarcaProductoController;
 use App\Http\Controllers\Api\ProductoController;
+use App\Http\Controllers\Api\ProveedorController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SucursalController;
 use App\Http\Controllers\Api\UnidadMedidaController;
@@ -70,7 +76,7 @@ Route::middleware(['auth:sanctum', SetAppUsuarioId::class])->group(function () {
     });
 
     Route::middleware('permiso:config.modificar')->group(function () {
-        Route::apiResource('sucursales', SucursalController::class)->only(['index', 'store', 'update'])
+        Route::apiResource('sucursales', SucursalController::class)->only(['index', 'show', 'store', 'update'])
             ->parameters(['sucursales' => 'sucursal']);
         Route::patch('sucursales/{sucursal}/estado', [SucursalController::class, 'estado']);
 
@@ -78,4 +84,37 @@ Route::middleware(['auth:sanctum', SetAppUsuarioId::class])->group(function () {
             ->parameters(['cajas' => 'caja']);
         Route::patch('cajas/{caja}/estado', [CajaController::class, 'estado']);
     });
+
+    // M2 — Inventario: existencias/kardex/alertas son de solo lectura
+    // autenticada; el ajuste y fijar minimos exigen inventario.ajustar.
+    Route::prefix('inventario')->group(function () {
+        Route::get('/', [InventarioController::class, 'index']);
+        Route::get('alertas', [AlertasController::class, 'index']);
+        Route::get('{producto}/kardex', [KardexController::class, 'index']);
+
+        Route::middleware('permiso:inventario.ajustar')->group(function () {
+            Route::post('ajustes', [AjusteController::class, 'store']);
+            Route::put('{producto}/minimos', [InventarioController::class, 'minimos']);
+        });
+    });
+
+    // M3 — Proveedores y compras: /compras/{compra} (show) es autenticado
+    // plano; el resto exige compra.registrar, y recibir exige el permiso
+    // separado compra.recibir (RN-M3-02).
+    Route::middleware('permiso:compra.registrar,config.modificar')->group(function () {
+        Route::apiResource('proveedores', ProveedorController::class)->only(['index', 'store', 'update'])
+            ->parameters(['proveedores' => 'proveedor']);
+        Route::patch('proveedores/{proveedor}/estado', [ProveedorController::class, 'estado']);
+    });
+
+    Route::get('compras/{compra}', [CompraController::class, 'show']);
+
+    Route::middleware('permiso:compra.registrar')->group(function () {
+        Route::get('compras', [CompraController::class, 'index']);
+        Route::post('compras', [CompraController::class, 'store']);
+        Route::put('compras/{compra}', [CompraController::class, 'update']);
+        Route::post('compras/{compra}/cancelar', [CompraController::class, 'cancelar']);
+    });
+
+    Route::middleware('permiso:compra.recibir')->post('compras/{compra}/recibir', [CompraController::class, 'recibir']);
 });

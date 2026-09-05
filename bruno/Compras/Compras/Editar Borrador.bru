@@ -1,0 +1,60 @@
+meta {
+  name: Editar Borrador
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/api/compras/{{compra_id_creada}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "proveedor_id": {{proveedor_id_creado}},
+    "sucursal_id": {{sucursal_id_creada}},
+    "folio_documento": "F-0001",
+    "fecha_documento": "2026-02-19",
+    "detalle": [
+      {
+        "producto_id": {{producto_id_creado}},
+        "cantidad": 15,
+        "costo_unitario": 48.00,
+        "tasa_iva": 0.16
+      }
+    ]
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+  sucursal_id_creada: 1
+  producto_id_creado: 1
+}
+
+script:post-response {
+  if (res.getStatus() === 200) {
+    bru.setVar('detalle_id_creado', res.getBody().detalle[0].id);
+  }
+}
+
+tests {
+  test("200 y totales recalculados", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Solo funciona mientras estatus=BORRADOR (409 estado_invalido si ya se
+  recibio algo). Reemplaza el detalle completo — el numero_renglon y el
+  detalle_id de arriba cambian tras esta llamada.
+}

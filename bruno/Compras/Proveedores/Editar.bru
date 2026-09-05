@@ -1,0 +1,43 @@
+meta {
+  name: Editar
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{base_url}}/api/proveedores/{{proveedor_id_creado}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "codigo": "PROV-001",
+    "razon_social": "Distribuidora del Norte SA de CV",
+    "nombre_comercial": "Dist. Norte (editado)",
+    "dias_credito": 45
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 editado", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  codigo debe seguir siendo unico (se ignora a si mismo). No incluye
+  "activo" — eso solo cambia via Cambiar Estado.
+}

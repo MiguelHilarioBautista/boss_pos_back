@@ -4,7 +4,9 @@ namespace Tests\Feature\Catalogos;
 
 use App\Models\Sucursal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\CreaUsuarioConPermiso;
 use Tests\TestCase;
 
@@ -16,6 +18,86 @@ use Tests\TestCase;
 class SucursalCajaControllerTest extends TestCase
 {
     use RefreshDatabase, CreaUsuarioConPermiso;
+
+    public function test_actualizar_sucursal_con_logo_lo_guarda_en_logoempresa(): void
+    {
+        Storage::fake('public');
+        $usuario = $this->usuarioConPermisos('config.modificar');
+        $sucursal = Sucursal::factory()->create();
+        $archivo = UploadedFile::fake()->create('logo.png', 10, 'image/png');
+
+        $response = $this->actingAs($usuario, 'web')->put("/api/sucursales/{$sucursal->id}", [
+            'nombre' => $sucursal->nombre,
+            'logo' => $archivo,
+        ]);
+
+        $response->assertOk();
+        $this->assertStringStartsWith('http', $response->json('logo_url'));
+        $rutaGuardada = ltrim(str_replace('/storage/', '', parse_url($response->json('logo_url'), PHP_URL_PATH)), '/');
+        Storage::disk('public')->assertExists($rutaGuardada);
+        $this->assertStringStartsWith('logoempresa/', $rutaGuardada);
+    }
+
+    public function test_actualizar_via_multipart_con_zona_frontera_como_texto_false(): void
+    {
+        // Reproduce el bug real: un form-data (subida de logo) manda
+        // zona_frontera como el texto "false", no como boolean JSON, y la
+        // regla `boolean` de Laravel rechazaba ese string.
+        Storage::fake('public');
+        $usuario = $this->usuarioConPermisos('config.modificar');
+        $sucursal = Sucursal::factory()->create();
+
+        $response = $this->actingAs($usuario, 'web')->put("/api/sucursales/{$sucursal->id}", [
+            'nombre' => $sucursal->nombre,
+            'zona_frontera' => 'false',
+            'logo' => UploadedFile::fake()->create('logo.png', 10, 'image/png'),
+        ]);
+
+        $response->assertOk();
+        $this->assertNotNull($response->json('logo_url'));
+        $this->assertFalse((bool) $response->json('zona_frontera'));
+    }
+
+    public function test_reemplazar_logo_borra_el_archivo_anterior(): void
+    {
+        Storage::fake('public');
+        $usuario = $this->usuarioConPermisos('config.modificar');
+        $sucursal = Sucursal::factory()->create();
+
+        $primero = $this->actingAs($usuario, 'web')->put("/api/sucursales/{$sucursal->id}", [
+            'nombre' => $sucursal->nombre, 'logo' => UploadedFile::fake()->create('viejo.png', 10, 'image/png'),
+        ]);
+        $rutaVieja = ltrim(str_replace('/storage/', '', parse_url($primero->json('logo_url'), PHP_URL_PATH)), '/');
+
+        $this->actingAs($usuario, 'web')->put("/api/sucursales/{$sucursal->id}", [
+            'nombre' => $sucursal->nombre, 'logo' => UploadedFile::fake()->create('nuevo.png', 10, 'image/png'),
+        ])->assertOk();
+
+        Storage::disk('public')->assertMissing($rutaVieja);
+    }
+
+    public function test_show_devuelve_una_sucursal_con_sus_datos_de_contacto(): void
+    {
+        $usuario = $this->usuarioConPermisos('config.modificar');
+        $sucursal = Sucursal::factory()->create([
+            'email' => 'contacto@sucursal.mx', 'logo_url' => 'https://cdn.example.com/logo.png',
+            'numero_exterior' => '123', 'codigo_postal' => '42000', 'pais' => 'MX', 'estado' => 'Hidalgo',
+        ]);
+
+        $response = $this->actingAs($usuario, 'web')->getJson("/api/sucursales/{$sucursal->id}");
+
+        $response->assertOk();
+        $response->assertJsonPath('email', 'contacto@sucursal.mx');
+        $response->assertJsonPath('codigo_postal', '42000');
+    }
+
+    public function test_show_sin_permiso_config_modificar_devuelve_403(): void
+    {
+        $usuario = $this->usuarioConPermisos();
+        $sucursal = Sucursal::factory()->create();
+
+        $this->actingAs($usuario, 'web')->getJson("/api/sucursales/{$sucursal->id}")->assertStatus(403);
+    }
 
     public function test_p09_alta_de_sucursal_crea_series_de_folios_venta_y_devol(): void
     {

@@ -1,0 +1,64 @@
+meta {
+  name: Crear Borrador
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/compras
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "proveedor_id": {{proveedor_id_creado}},
+    "sucursal_id": {{sucursal_id_creada}},
+    "folio_documento": "F-0001",
+    "fecha_documento": "2026-02-19",
+    "detalle": [
+      {
+        "producto_id": {{producto_id_creado}},
+        "cantidad": 10,
+        "costo_unitario": 50.00,
+        "tasa_iva": 0.16
+      }
+    ]
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+  proveedor_id_creado: 1
+  sucursal_id_creada: 1
+  producto_id_creado: 1
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar('compra_id_creada', res.getBody().id);
+    bru.setVar('detalle_id_creado', res.getBody().detalle[0].id);
+  }
+}
+
+tests {
+  test("201 creada en BORRADOR", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().estatus).to.equal('BORRADOR');
+  });
+}
+
+docs {
+  D-M3-3: folio_documento debe ser unico por proveedor_id (no por año
+  fiscal). El proveedor debe existir y estar activo (A2). Una compra en
+  BORRADOR nunca toca inventario (RN-M3-01) — verificalo en
+  Inventario > Existencias antes y despues de esta llamada.
+}

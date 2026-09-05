@@ -1,0 +1,34 @@
+meta {
+  name: Kardex
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base_url}}/api/inventario/{{producto_id_creado}}/kardex
+  body: none
+  auth: none
+}
+
+headers {
+  Accept: application/json
+  Origin: {{frontend_origin}}
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+  producto_id_creado: 1
+}
+
+tests {
+  test("200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+docs {
+  Filtros opcionales: ?sucursal_id=&desde=YYYY-MM-DD&hasta=YYYY-MM-DD&tipo=.
+  Cada renglon trae stock_anterior/nuevo y costo_prom_anterior/nuevo
+  (snapshots, nunca se recalculan despues). Solo requiere sesion activa.
+}

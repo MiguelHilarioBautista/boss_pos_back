@@ -1,0 +1,54 @@
+meta {
+  name: Crear
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/proveedores
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "codigo": "PROV-001",
+    "razon_social": "Distribuidora del Norte SA de CV",
+    "nombre_comercial": "Dist. Norte",
+    "rfc": "DNO010203AB1",
+    "contacto": "Juan Perez",
+    "telefono": "5512345678",
+    "email": "compras@distnorte.mx",
+    "direccion": "Av. Industria 100, CDMX",
+    "dias_credito": 30
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setVar('proveedor_id_creado', res.getBody().id);
+  }
+}
+
+tests {
+  test("201 creado", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+}
+
+docs {
+  rfc es opcional, pero si se manda debe tener 12 o 13 caracteres
+  (ck_proveedor_rfc). codigo es unico.
+}

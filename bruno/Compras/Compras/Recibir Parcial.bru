@@ -1,0 +1,50 @@
+meta {
+  name: Recibir Parcial
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/api/compras/{{compra_id_creada}}/recibir
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "recepciones": [
+      {
+        "detalle_id": {{detalle_id_creado}},
+        "cantidad_recibida": 6
+      }
+    ]
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 y estatus PARCIAL", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().estatus).to.equal('PARCIAL');
+  });
+}
+
+docs {
+  Requiere el permiso compra.recibir (distinto de compra.registrar,
+  RN-M3-02). Genera un ENTRADA_COMPRA en el motor de inventario de M2 con
+  costo_unitario NETO (nunca el importe con IVA, RN-M3-04) — revisalo en
+  Inventario > Existencias o en Inventario > Kardex para el producto.
+  Recibe menos de lo pedido en el renglon a proposito para dejar la compra
+  en PARCIAL; corre "Recibir el Resto" despues.
+}

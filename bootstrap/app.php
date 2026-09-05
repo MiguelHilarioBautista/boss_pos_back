@@ -7,7 +7,9 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\Request;
+use App\Exceptions\EstadoInvalidoException;
 use App\Exceptions\PermisoDenegadoException;
+use App\Exceptions\StockInsuficienteException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -43,6 +45,24 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
+        $exceptions->render(function (StockInsuficienteException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'error' => 'stock_insuficiente',
+                    'mensaje' => $e->getMessage(),
+                ], 409);
+            }
+        });
+
+        $exceptions->render(function (EstadoInvalidoException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'error' => 'estado_invalido',
+                    'mensaje' => $e->getMessage(),
+                ], 409);
+            }
+        });
+
         $exceptions->render(function (ValidationException $e, Request $request) {
             if ($request->is('api/*')) {
                 return response()->json([
@@ -60,11 +80,14 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if (($e->errorInfo[1] ?? null) === 1644) {
                 // SIGNAL SQLSTATE '45000' lanzado por un trigger o procedimiento:
-                // es una regla de negocio, no un error de servidor (nunca 500).
+                // es un conflicto con una invariante de la BD (p.ej. kardex
+                // append-only), no un error de validacion ni de servidor.
+                // 409, no 422 (M2 E3) — sin tests que dependieran del 422
+                // anterior, nunca se ejercito ese camino en M0/M1.
                 return response()->json([
-                    'error' => 'regla_negocio',
-                    'mensaje' => $e->errorInfo[2] ?? 'La operacion viola una regla de negocio.',
-                ], 422);
+                    'error' => 'conflicto_invariante',
+                    'mensaje' => $e->errorInfo[2] ?? 'La operacion viola una invariante de la base de datos.',
+                ], 409);
             }
 
             if (($e->errorInfo[1] ?? null) === 1062) {
