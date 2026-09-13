@@ -21,15 +21,18 @@ class AuthController extends Controller
      * POST /auth/login — CU-01. Sigue el diagrama de flujo de MO.pdf S3.1 y
      * las reglas RN-M0-01..08. Mensajes siempre genericos: nunca revela si el
      * usuario existe.
+     *
+     * RN-CRED-01/02: el login ya no usa un nombre de usuario, el email es
+     * la credencial de acceso.
      */
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'usuario' => ['required', 'string'],
+            'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
 
-        $usuario = User::where('usuario', $data['usuario'])->first();
+        $usuario = User::where('email', $data['email'])->first();
 
         if (! $usuario || ! $usuario->activo) {
             $this->registrarAcceso($usuario?->id, 'LOGIN_FALLIDO', $request);

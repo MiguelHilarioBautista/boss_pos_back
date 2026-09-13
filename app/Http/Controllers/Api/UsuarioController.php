@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Auditoria;
 use App\Models\User;
+use App\Support\GeneradorNumeroEmpleado;
 use App\Support\PasswordPolicy;
 use App\Support\UsuarioPresenter;
 use Illuminate\Http\JsonResponse;
@@ -47,39 +48,46 @@ class UsuarioController extends Controller
      * Alta de usuario. Segregacion de funciones (Reglas de negocio.pdf S11.2):
      * "Alta de usuario | Administrador | —" — no requiere autorizacion
      * adicional de un segundo usuario, solo el permiso `usuario.gestionar`.
+     *
+     * RN-Configuracion-Anadir-Usuario: el campo "Usuario" desaparece de la
+     * pantalla (RN-CRED-01) — el email es la credencial de acceso
+     * (RN-CRED-02/03) y numero_empleado se genera solo, nunca se captura
+     * (RN-NUM-01/02). `usuario` sigue existiendo en la tabla (NOT NULL+
+     * UNIQUE, esquema congelado) pero ya no es dato de negocio: se llena
+     * con el mismo numero_empleado, nunca se lee para autenticar.
      */
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'usuario' => ['required', 'string', 'max:50', 'unique:usuarios,usuario'],
             'password_inicial' => array_merge(['required', 'string'], PasswordPolicy::reglas()),
             'nombre' => ['required', 'string', 'max:60'],
             'apellidos' => ['required', 'string', 'max:80'],
             'rol_id' => ['required', 'integer', 'exists:roles,id'],
-            'numero_empleado' => ['nullable', 'string', 'max:20', 'unique:usuarios,numero_empleado'],
-            'email' => ['nullable', 'email', 'max:120'],
-            'telefono' => ['nullable', 'string', 'max:20'],
+            'email' => ['required', 'email', 'max:120', 'unique:usuarios,email'],
+            'telefono' => ['required', 'digits:10'],
             'sucursales' => ['required', 'array', 'min:1'],
             'sucursales.*' => ['integer', 'distinct', 'exists:sucursales,id'],
             'sucursal_principal_id' => ['required', 'integer', Rule::in($request->input('sucursales', []))],
         ]);
 
-        if (strcasecmp($data['password_inicial'], $data['usuario']) === 0) {
+        if (strcasecmp($data['password_inicial'], $data['email']) === 0) {
             throw ValidationException::withMessages([
-                'password_inicial' => 'La contraseña inicial no puede ser igual al usuario.',
+                'password_inicial' => 'La contraseña inicial no puede ser igual al email.',
             ]);
         }
 
         $usuario = DB::transaction(function () use ($data, $request) {
+            $numeroEmpleado = GeneradorNumeroEmpleado::generar();
+
             $usuario = User::create([
-                'usuario' => $data['usuario'],
+                'usuario' => $numeroEmpleado,
                 'password_hash' => Hash::make($data['password_inicial']),
                 'nombre' => $data['nombre'],
                 'apellidos' => $data['apellidos'],
                 'rol_id' => $data['rol_id'],
-                'numero_empleado' => $data['numero_empleado'] ?? null,
-                'email' => $data['email'] ?? null,
-                'telefono' => $data['telefono'] ?? null,
+                'numero_empleado' => $numeroEmpleado,
+                'email' => $data['email'],
+                'telefono' => $data['telefono'],
                 'activo' => true,
                 'debe_cambiar_pass' => true,
             ]);
@@ -93,7 +101,7 @@ class UsuarioController extends Controller
                 'tabla' => 'usuarios',
                 'registro_id' => $usuario->id,
                 'accion' => 'INSERT',
-                'valores_nuevos' => ['usuario' => $usuario->usuario, 'rol_id' => $usuario->rol_id],
+                'valores_nuevos' => ['numero_empleado' => $usuario->numero_empleado, 'email' => $usuario->email, 'rol_id' => $usuario->rol_id],
                 'ip_origen' => $request->ip(),
             ]);
 
@@ -101,6 +109,58 @@ class UsuarioController extends Controller
         });
 
         return response()->json(UsuarioPresenter::detalle($usuario->fresh()), 201);
+    }
+
+    /**
+     * Editar datos de un usuario existente. Mismas reglas de obligatoriedad
+     * que el alta (RN-Configuracion-Anadir-Usuario), salvo lo que
+     * deliberadamente NO se puede tocar aqui:
+     * - numero_empleado / usuario: generados una sola vez en el alta
+     *   (RN-NUM-02, "solo lectura"), nunca se aceptan en este request.
+     * - password / activo: tienen sus propios flujos dedicados
+     *   (restablecer contraseña, desactivar/reactivar) — mezclarlos aqui
+     *   perderia el rastro de auditoria especifico de cada accion.
+     */
+    public function update(Request $request, User $usuario): JsonResponse
+    {
+        $data = $request->validate([
+            'nombre' => ['required', 'string', 'max:60'],
+            'apellidos' => ['required', 'string', 'max:80'],
+            'email' => ['required', 'email', 'max:120', Rule::unique('usuarios', 'email')->ignore($usuario->id)],
+            'telefono' => ['required', 'digits:10'],
+            'rol_id' => ['required', 'integer', 'exists:roles,id'],
+            'sucursales' => ['required', 'array', 'min:1'],
+            'sucursales.*' => ['integer', 'distinct', 'exists:sucursales,id'],
+            'sucursal_principal_id' => ['required', 'integer', Rule::in($request->input('sucursales', []))],
+        ]);
+
+        DB::transaction(function () use ($data, $usuario, $request) {
+            $anterior = $usuario->only(['nombre', 'apellidos', 'email', 'telefono', 'rol_id']);
+
+            $usuario->update([
+                'nombre' => $data['nombre'],
+                'apellidos' => $data['apellidos'],
+                'email' => $data['email'],
+                'telefono' => $data['telefono'],
+                'rol_id' => $data['rol_id'],
+            ]);
+
+            $usuario->sucursales()->sync(collect($data['sucursales'])->mapWithKeys(fn ($id) => [
+                $id => ['es_principal' => $id === $data['sucursal_principal_id']],
+            ])->all());
+
+            Auditoria::create([
+                'usuario_id' => $request->user()->id,
+                'tabla' => 'usuarios',
+                'registro_id' => $usuario->id,
+                'accion' => 'UPDATE',
+                'valores_anteriores' => $anterior,
+                'valores_nuevos' => $usuario->only(['nombre', 'apellidos', 'email', 'telefono', 'rol_id']),
+                'ip_origen' => $request->ip(),
+            ]);
+        });
+
+        return response()->json(UsuarioPresenter::detalle($usuario->fresh()));
     }
 
     /**

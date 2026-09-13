@@ -1,0 +1,53 @@
+meta {
+  name: Editar
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/api/usuarios/{{usuario_id_creado}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Accept: application/json
+  Origin: {{frontend_origin}}
+  X-XSRF-TOKEN: {{xsrf_token}}
+}
+
+body:json {
+  {
+    "nombre": "Nombre",
+    "apellidos": "Apellido Editado",
+    "email": "cajero.demo@example.com",
+    "telefono": "8112345678",
+    "rol_id": 4,
+    "sucursales": [1],
+    "sucursal_principal_id": 1
+  }
+}
+
+vars:pre-request {
+  base_url: http://127.0.0.1:8000
+  frontend_origin: http://localhost:5173
+}
+
+tests {
+  test("200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("no permite mover el numero_empleado aunque se mande en el body", function () {
+    const json = res.getBody();
+    expect(json).to.have.property('numero_empleado');
+  });
+}
+
+docs {
+  Usa el id guardado por "Crear" (usuario_id_creado). No manda ni acepta
+  "numero_empleado" ni "usuario" — son de solo lectura (RN-NUM-02). Tampoco
+  cambia password ni activo: para eso estan "Restablecer contraseña" (no
+  implementado aun) y "Desactivar"/"Reactivar".
+}

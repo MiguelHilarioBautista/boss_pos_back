@@ -36,6 +36,7 @@ Route::middleware(['auth:sanctum', SetAppUsuarioId::class, 'permiso:usuario.gest
             Route::get('/', [UsuarioController::class, 'index']);
             Route::get('{usuario}', [UsuarioController::class, 'show']);
             Route::post('/', [UsuarioController::class, 'store']);
+            Route::put('{usuario}', [UsuarioController::class, 'update']);
             Route::post('{usuario}/desactivar', [UsuarioController::class, 'desactivar']);
             Route::post('{usuario}/reactivar', [UsuarioController::class, 'reactivar']);
         });

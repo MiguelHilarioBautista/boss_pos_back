@@ -25,9 +25,19 @@ tests {
   test("200 OK", function () {
     expect(res.getStatus()).to.equal(200);
   });
+
+  test("trae telefono, numero_empleado y rol_id (solo lectura para el numero_empleado)", function () {
+    const json = res.getBody();
+    expect(json).to.have.property('telefono');
+    expect(json).to.have.property('numero_empleado');
+    expect(json).to.have.property('rol_id');
+  });
 }
 
 docs {
   Usa el id guardado por "Crear" (usuario_id_creado). Si no has corrido
   Crear en esta sesion, reemplaza {{usuario_id_creado}} por un id real.
+
+  numero_empleado se muestra aqui de solo lectura: la pantalla de Editar no
+  debe mandarlo de vuelta (ver "Editar", RN-NUM-02).
 }

@@ -14,7 +14,10 @@ class UsuarioPresenter
     public static function contexto(User $usuario): array
     {
         return [
-            'usuario' => self::resumen($usuario),
+            // Sesion propia: el frontend pinta el rol tal cual, por eso aqui
+            // va el nombre legible ("Administrador") y no el codigo interno
+            // ("ADMIN") que si se usa en listados/detalle de otros usuarios.
+            'usuario' => array_merge(self::resumen($usuario), ['rol' => $usuario->rol?->nombre]),
             'permisos' => $usuario->permisos(),
             'sucursales' => $usuario->sucursales->map(fn ($s) => [
                 'id' => $s->id,
@@ -53,15 +56,24 @@ class UsuarioPresenter
 
     /**
      * Forma reducida para listados (GET /usuarios).
+     *
+     * RN-CRED-01: no expone `usuario` — ese concepto ya no existe de cara al
+     * negocio (login es por email, ver AuthController::login).
+     *
+     * `nombre` y `apellidos` van separados (asi vive en la tabla, y asi los
+     * pide el formulario de Editar) — el frontend concatena si necesita
+     * mostrar el nombre completo, no hace falta mandarlo ya armado.
      */
     public static function resumen(User $usuario): array
     {
         return [
             'id' => $usuario->id,
-            'usuario' => $usuario->usuario,
-            'nombre' => trim("{$usuario->nombre} {$usuario->apellidos}"),
+            'nombre' => $usuario->nombre,
+            'apellidos' => $usuario->apellidos,
             'numero_empleado' => $usuario->numero_empleado,
             'email' => $usuario->email,
+            'telefono' => $usuario->telefono,
+            'rol_id' => $usuario->rol_id,
             'rol' => $usuario->rol?->codigo,
             'activo' => $usuario->activo,
             'debe_cambiar_pass' => $usuario->debe_cambiar_pass,
