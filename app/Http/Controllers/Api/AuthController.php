@@ -138,7 +138,9 @@ class AuthController extends Controller
 
     /**
      * Politica minima de contraseña (D6): 8+ caracteres, al menos una letra y
-     * un numero, distinta del usuario y de la contraseña actual.
+     * un numero, distinta de la credencial de acceso y de la contraseña
+     * actual. RN-CRED-02: la credencial es el email (no `usuario`, que ya
+     * no es un dato de negocio — ver UsuarioController::store).
      */
     private function validarPoliticaPassword(string $nueva, User $usuario): void
     {
@@ -146,12 +148,17 @@ class AuthController extends Controller
             'password_nuevo' => PasswordPolicy::reglas(),
         ]);
 
-        if (strcasecmp($nueva, $usuario->usuario) === 0 || Hash::check($nueva, $usuario->password_hash)) {
-            $validator->errors()->add('password_nuevo', 'La nueva contraseña debe ser distinta del usuario y de la contraseña actual.');
+        // errors() dispara passes() una sola vez y cachea el MessageBag; a
+        // partir de aqui solo se le agrega — NUNCA volver a llamar
+        // fails()/passes(), reinician el bag y borran lo agregado a mano.
+        $errores = $validator->errors();
+
+        if (strcasecmp($nueva, $usuario->email) === 0 || Hash::check($nueva, $usuario->password_hash)) {
+            $errores->add('password_nuevo', 'La nueva contraseña debe ser distinta del email y de la contraseña actual.');
         }
 
-        if ($validator->fails() || $validator->errors()->isNotEmpty()) {
-            throw ValidationException::withMessages($validator->errors()->toArray());
+        if ($errores->isNotEmpty()) {
+            throw ValidationException::withMessages($errores->toArray());
         }
     }
 

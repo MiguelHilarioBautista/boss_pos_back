@@ -72,4 +72,22 @@ class CambiarPasswordTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    public function test_password_igual_al_email_devuelve_422(): void
+    {
+        // El email debe cumplir tambien la politica de formato (letra+digito)
+        // para que el 422 se deba especificamente a la igualdad con el
+        // email, no a que el valor de prueba no pase el regex.
+        $usuario = User::factory()->create([
+            'email' => 'igual1@example.com', 'password_hash' => Hash::make('Actual123'),
+        ]);
+
+        $response = $this->actingAs($usuario, 'web')->postJson('/api/auth/cambiar-password', [
+            'password_actual' => 'Actual123',
+            'password_nuevo' => 'igual1@example.com',
+            'password_confirmacion' => 'igual1@example.com',
+        ]);
+
+        $response->assertStatus(422);
+    }
 }
